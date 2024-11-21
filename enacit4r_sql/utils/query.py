@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, select
-from sqlalchemy import func, or_, and_, cast, String
+from sqlalchemy import func, or_, and_, cast, String, false, true
 import json
 
 
@@ -39,87 +39,123 @@ class QueryBuilder:
         if len(filter):
             for field, value in filter.items():
                 if field == "$and":
-                    for sub_filter in value:
-                        for sub_field, sub_value in sub_filter.items():
-                            query_ = self._apply_column_filter(
-                                query_, model, sub_field, sub_value)
+                    clause = self._make_and_filter(model, value)
+                    if clause is not None:
+                        query_ = query_.where(clause)
+                elif field == "$or":
+                    clause = self._make_or_filter(model, value)
+                    if clause is not None:
+                        query_ = query_.where(clause)
                 elif field in self.joinModels:
                     joinModel = self.joinModels[field]
                     query_ = self._apply_model_filter(query_, joinModel, value)
                 else:
-                    query_ = self._apply_column_filter(
-                        query_, model, field, value)
+                    clause = self._make_column_filter(model, field, value)
+                    if clause is not None:
+                        query_ = query_.where(clause)
         return query_
 
-    def _apply_column_filter(self, query_, model, field, value):
+    def _make_and_filter(self, model, value):
+        and_clauses = []
+        for sub_filter in value:
+            for sub_field, sub_value in sub_filter.items():
+                clause = None
+                if sub_field == "$and":
+                    clause = self._make_and_filter(model, sub_value)
+                elif sub_field == "$or":
+                    clause = self._make_or_filter(model, sub_value)
+                else:
+                    clause = self._make_column_filter(model, sub_field, sub_value)
+                if clause is not None:
+                    and_clauses.append(clause)
+        if len(and_clauses):
+            return and_(true(), *and_clauses)
+        return None
+
+    def _make_or_filter(self, model, value):
+        or_clauses = []
+        for sub_filter in value:
+            for sub_field, sub_value in sub_filter.items():
+                clause = None
+                if sub_field == "$and":
+                    clause = self._make_and_filter(model, sub_value)
+                elif sub_field == "$or":
+                    clause = self._make_or_filter(model, sub_value)
+                else:
+                    clause = self._make_column_filter(model, sub_field, sub_value)
+                if clause is not None:
+                    or_clauses.append(clause)
+        if len(or_clauses):
+            return or_(false(), *or_clauses)
+        return None
+
+    def _make_column_filter(self, model, field, value):
         column = getattr(model, field)
+        clause = None
         if isinstance(value, list):
             if len(value) == 1 and value[0] is None:
-                query_ = self._apply_filter_value(
-                    query_, field, column, value[0])
+                clause = self._make_filter_value(field, column, value[0])
             elif None in value:
                 noNoneValues = [v for v in value if v is not None]
-                query_ = query_.where(
-                    or_(column.is_(None), column.in_(noNoneValues)))
+                clause = (or_(column.is_(None), column.in_(noNoneValues)))
             else:
-                query_ = query_.where(column.in_(value))
+                clause = (column.in_(value))
         else:
-            query_ = self._apply_filter_value(
-                query_, field, column, value)
-        return query_
+            clause = self._make_filter_value(field, column, value)
+        return clause
 
-    def _apply_filter_value(self, query_, field, column, value):
+    def _make_filter_value(self, field, column, value):
+        clause = None
         if field == "id" or field == "identifier" or isinstance(value, int):
-            query_ = query_.where(column == value)
+            clause = (column == value)
         elif value is None:
-            query_ = query_.where(column.is_(None))
+            clause = (column.is_(None))
         elif isinstance(value, dict):
-            query_ = self._apply_filter_object(query_, field, column, value)
+            clause = self._make_filter_object(field, column, value)
         else:
-            query_ = query_.where(column.ilike(f"%{value}%"))
-        return query_
+            clause = (column.ilike(f"%{value}%"))
+        return clause
 
-    def _apply_filter_object(self, query_, field, column, value):
+    def _make_filter_object(self, field, column, value):
+        clause = None
         if '$exists' in value:
             if value['$exists']:
-                query_ = query_.where(
-                    and_(column.isnot(None), cast(column, String) != 'null'))
+                clause = and_(column.isnot(None), cast(column, String) != 'null')
             elif not value['$exists']:
-                query_ = query_.where(
-                    or_(column.is_(None), cast(column, String) == 'null'))
+                clause = or_(column.is_(None), cast(column, String) == 'null')
 
         if '$ge' in value:
-            query_ = query_.where(column >= value['$ge'])
+            clause = column >= value['$ge']
         if '$gte' in value:
-            query_ = query_.where(column >= value['$gte'])
+            clause = column >= value['$gte']
         if '$gt' in value:
-            query_ = query_.where(column > value['$gt'])
+            clause = column > value['$gt']
 
         if '$le' in value:
-            query_ = query_.where(column <= value['$le'])
+            clause = column <= value['$le']
         if '$lte' in value:
-            query_ = query_.where(column <= value['$lte'])
+            clause = column <= value['$lte']
         if '$lt' in value:
-            query_ = query_.where(column < value['$lt'])
+            clause = column < value['$lt']
 
         if '$in' in value:
-            query_ = query_.where(column.in_(value['$in']))
+            clause = column.in_(value['$in'])
         if '$nin' in value:
-            query_ = query_.where(column.notin_(value['$nin']))
+            clause = column.notin_(value['$nin'])
 
         if '$eq' in value:
-            query_ = query_.where(column == value['$eq'])
+            clause = column == value['$eq']
         if '$ne' in value:
-            query_ = query_.where(column != value['$ne'])
+            clause = column != value['$ne']
 
         if '$like' in value:
-            query_ = query_.where(column.like(f"%{value['$like']}%"))
+            clause = column.like(f"%{value['$like']}%")
         if '$ilike' in value:
-            query_ = query_.where(column.ilike(f"%{value['$ilike']}%"))
+            clause = column.ilike(f"%{value['$ilike']}%")
         if '$contains' in value:
-            query_ = query_.where(column.contains(value['$contains']))
+            clause = column.contains(value['$contains'])
 
-        return query_
+        return clause
 
     def _apply_sort(self, query_):
         if len(self.sort) == 2:
