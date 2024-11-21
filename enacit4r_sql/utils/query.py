@@ -39,23 +39,13 @@ class QueryBuilder:
         if len(filter):
             for field, value in filter.items():
                 if field == "$and":
-                    and_clauses = []
-                    for sub_filter in value:
-                        for sub_field, sub_value in sub_filter.items():
-                            clause = self._make_column_filter(model, sub_field, sub_value)
-                            if clause is not None:
-                                and_clauses.append(clause)
-                    if len(and_clauses):
-                        query_ = query_.where(and_(true(), *and_clauses))
+                    clause = self._make_and_filter(model, value)
+                    if clause is not None:
+                        query_ = query_.where(clause)
                 elif field == "$or":
-                    or_clauses = []
-                    for sub_filter in value:
-                        for sub_field, sub_value in sub_filter.items():
-                            clause = self._make_column_filter(model, sub_field, sub_value)
-                            if clause is not None:
-                                or_clauses.append(clause)
-                    if len(or_clauses):
-                        query_ = query_.where(or_(false(), *or_clauses))
+                    clause = self._make_or_filter(model, value)
+                    if clause is not None:
+                        query_ = query_.where(clause)
                 elif field in self.joinModels:
                     joinModel = self.joinModels[field]
                     query_ = self._apply_model_filter(query_, joinModel, value)
@@ -64,6 +54,40 @@ class QueryBuilder:
                     if clause is not None:
                         query_ = query_.where(clause)
         return query_
+
+    def _make_and_filter(self, model, value):
+        and_clauses = []
+        for sub_filter in value:
+            for sub_field, sub_value in sub_filter.items():
+                clause = None
+                if sub_field == "$and":
+                    clause = self._make_and_filter(model, sub_value)
+                elif sub_field == "$or":
+                    clause = self._make_or_filter(model, sub_value)
+                else:
+                    clause = self._make_column_filter(model, sub_field, sub_value)
+                if clause is not None:
+                    and_clauses.append(clause)
+        if len(and_clauses):
+            return and_(true(), *and_clauses)
+        return None
+
+    def _make_or_filter(self, model, value):
+        or_clauses = []
+        for sub_filter in value:
+            for sub_field, sub_value in sub_filter.items():
+                clause = None
+                if sub_field == "$and":
+                    clause = self._make_and_filter(model, sub_value)
+                elif sub_field == "$or":
+                    clause = self._make_or_filter(model, sub_value)
+                else:
+                    clause = self._make_column_filter(model, sub_field, sub_value)
+                if clause is not None:
+                    or_clauses.append(clause)
+        if len(or_clauses):
+            return or_(false(), *or_clauses)
+        return None
 
     def _make_column_filter(self, model, field, value):
         column = getattr(model, field)
