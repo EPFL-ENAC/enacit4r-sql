@@ -43,7 +43,7 @@ class QueryBuilder:
                     for sub_filter in value:
                         for sub_field, sub_value in sub_filter.items():
                             clause = self._make_column_filter(model, sub_field, sub_value)
-                            if clause:
+                            if clause is not None:
                                 and_clauses.append(clause)
                     if len(and_clauses):
                         query_ = query_.where(and_(true(), *and_clauses))
@@ -52,7 +52,7 @@ class QueryBuilder:
                     for sub_filter in value:
                         for sub_field, sub_value in sub_filter.items():
                             clause = self._make_column_filter(model, sub_field, sub_value)
-                            if clause:
+                            if clause is not None:
                                 or_clauses.append(clause)
                     if len(or_clauses):
                         query_ = query_.where(or_(false(), *or_clauses))
@@ -61,11 +61,11 @@ class QueryBuilder:
                     query_ = self._apply_model_filter(query_, joinModel, value)
                 else:
                     clause = self._make_column_filter(model, field, value)
-                    if clause:
+                    if clause is not None:
                         query_ = query_.where(clause)
         return query_
 
-    def _make_column_filter(self, model, field, value) -> list:
+    def _make_column_filter(self, model, field, value):
         column = getattr(model, field)
         clause = None
         if isinstance(value, list):
