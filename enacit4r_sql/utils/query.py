@@ -23,8 +23,12 @@ class QueryBuilder:
     def build_count_query(self):
         return self._apply_filter(select(func.count(func.distinct(self.model.id))))
 
-    def build_query(self, total_count):
-        query_ = self._apply_filter(select(self.model))
+    def build_query(self, total_count, fields=None):
+        _query = select(self.model)
+        if fields and len(fields):
+            columns = [getattr(self.model, field) for field in fields]
+            _query = _query.with_only_columns(columns)
+        query_ = self._apply_filter(_query)
         query_ = self._apply_sort(query_)
         return self._apply_range(query_, total_count)
 
