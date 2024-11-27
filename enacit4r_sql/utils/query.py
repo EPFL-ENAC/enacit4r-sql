@@ -165,10 +165,10 @@ class QueryBuilder:
         if len(self.sort) == 2:
             sort_field, sort_order = self.sort
             attr = getattr(self.model, sort_field)
-            if sort_order == "ASC":
-                query_ = query_.order_by(attr)
-            else:
+            if sort_order and sort_order.lower() == "desc":
                 query_ = query_.order_by(attr.desc())
+            else:
+                query_ = query_.order_by(attr)
         return query_
 
     def _apply_range(self, query_, total_count):
