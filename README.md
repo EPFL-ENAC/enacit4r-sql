@@ -112,6 +112,8 @@ Each criteria is a dictionary with a key that represents the field to filter and
 {'name': {'$exists': True}}
 ```
 
+Note: The operators can be extended when models are joined (1-to-many relationship).
+
 ### Sort
 
 The sort specification is a list which first item is the field to sort and the second is the direction of the sort (`ASC` or `DESC`).
@@ -124,7 +126,6 @@ Notes:
 
 * The default direction is `ASC`.
 * The sort specification by multiple fields is not supported (yet).
-* The operators can be extended when models are joined (1-to-many relationship).
 
 ### Range
 
