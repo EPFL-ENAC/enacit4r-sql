@@ -27,7 +27,7 @@ class QueryBuilder:
         _query = select(self.model)
         if fields and len(fields):
             columns = [getattr(self.model, field) for field in fields]
-            _query = _query.with_only_columns(*columns)
+            _query = select(*columns)
         query_ = self._apply_filter(_query)
         query_ = self._apply_sort(query_)
         return self._apply_range(query_, total_count)
