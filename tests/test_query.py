@@ -77,12 +77,19 @@ def test_ne_query():
     #print(as_sql(query))
     assert as_sql(query) == "SELECT author.id, author.name, author.email, author.institutions, author.article_id FROM author WHERE author.name != :name_1"
 
-def test_eq_num_query():
-    builder = QueryBuilder(Article, {"stars": { "$eq": 1 }}, [], [])
+def test_in_num_query():
+    builder = QueryBuilder(Article, {"stars": { "$in": [1, 2] }}, [], [])
     start, end, query = builder.build_query(1)
     assert query is not None
     #print(as_sql(query))
-    assert as_sql(query) == "SELECT article.id, article.title, article.stars FROM article WHERE article.stars = :stars_1"
+    assert as_sql(query) == "SELECT article.id, article.title, article.stars FROM article WHERE article.stars IN (__[POSTCOMPILE_stars_1])"
+
+def test_nin_num_query():
+    builder = QueryBuilder(Article, {"stars": { "$nin": [1, 2] }}, [], [])
+    start, end, query = builder.build_query(1)
+    assert query is not None
+    #print(as_sql(query))
+    assert as_sql(query) == "SELECT article.id, article.title, article.stars FROM article WHERE (article.stars NOT IN (__[POSTCOMPILE_stars_1]))"
 
 def test_lt_query():
     builder = QueryBuilder(Article, {"stars": { "$lt": 1 }}, [], [])
@@ -125,6 +132,14 @@ def test_ge_query():
     assert query is not None
     #print(as_sql(query))
     assert as_sql(query) == "SELECT article.id, article.title, article.stars FROM article WHERE article.stars >= :stars_1"
+
+def test_in_num_query():
+    builder = QueryBuilder(Article, {"stars": { "$ge": 1 }}, [], [])
+    start, end, query = builder.build_query(1)
+    assert query is not None
+    #print(as_sql(query))
+    assert as_sql(query) == "SELECT article.id, article.title, article.stars FROM article WHERE article.stars >= :stars_1"
+
 
 def test_like_query():
     builder = QueryBuilder(Article, {"title": { "$like": "Drone" }}, [], [])
