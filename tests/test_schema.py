@@ -14,6 +14,53 @@ def test_validate_empty_params():
   except ValidationError as e:
     assert False, f"Error: {e}"
 
+def test_validate_sort_params():
+  try:
+    validate_params({}, ["name", "asc"], [])
+  except ValidationError as e:
+    assert False, f"Error: {e}"
+  try:
+    validate_params({}, ["name"], [])
+  except ValidationError as e:
+    assert False, f"Error: {e}"
+  try:
+    validate_params({}, ["name", "toto"], [])
+    assert False
+  except ValidationError as e:
+    pass
+  try:
+    validate_params({}, ["name", "desc", "pwel"], [])
+    assert False
+  except ValidationError as e:
+    pass
+
+def test_validate_range_params():
+  try:
+    validate_params({}, [], [0, 9])
+  except ValidationError as e:
+    assert False, f"Error: {e}"
+  try:
+    validate_params({}, [], [0, 1, 2])
+    assert False
+  except ValidationError as e:
+    pass
+  try:
+    validate_params({}, [], ["0", "9"])
+    assert False
+  except ValidationError as e:
+    pass
+
+def test_validate_fields_params():
+  try:
+    validate_params({}, [], [], ["id", "name"])
+  except ValidationError as e:
+    assert False, f"Error: {e}"
+  try:
+    validate_params({}, [], [], [1, 2, 3])
+    assert False
+  except ValidationError as e:
+    pass
+
 def test_validate_filter_eq():
   try:
     validate_params({"stars": { "$eq": 1 }}, [], [])

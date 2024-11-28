@@ -32,13 +32,14 @@ def paramAsArray(param: str):
     return json.loads(param) if param else []
 
 
-def validate_params(filter: dict | str, sort: list | str, range: list | str) -> dict:
+def validate_params(filter: dict | str, sort: list | str, range: list | str, fields: list | str = []) -> dict:
     """Validate filter, sort and range parameters against a JSON schema.
     
     Args:
         filter (dict | str): Filter parameters
         sort (list | str): Sort parameters
         range (list | str): Range parameters
+        fields (list | str): Fields to retrieve
     
     Returns:
         dict: The validated parameters as a dictionary
@@ -53,7 +54,8 @@ def validate_params(filter: dict | str, sort: list | str, range: list | str) -> 
     to_validate = {
         "filter": filter if isinstance(filter, dict) else paramAsDict(filter),
         "sort": sort if isinstance(sort, list) else paramAsArray(sort),
-        "range": range if isinstance(range, list) else paramAsArray(range)
+        "range": range if isinstance(range, list) else paramAsArray(range),
+        "fields": fields if isinstance(fields, list) else paramAsArray(fields),
     }
     try:
         validate(instance=to_validate, schema=schema)
@@ -244,6 +246,10 @@ class QueryBuilder:
                 query_ = query_.order_by(attr.desc())
             else:
                 query_ = query_.order_by(attr)
+        elif len(self.sort) == 1:
+            sort_field = self.sort[0]
+            attr = getattr(self.model, sort_field)
+            query_ = query_.order_by(attr)
         return query_
 
     def _apply_range(self, query_, total_count):
