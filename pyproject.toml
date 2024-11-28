@@ -9,6 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 sqlmodel = "^0.0.22"
+jsonschema = "^4.23.0"
 
 
 [tool.poetry.group.dev.dependencies]

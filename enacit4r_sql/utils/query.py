@@ -1,19 +1,84 @@
 from sqlmodel import SQLModel, select
 from sqlalchemy import func, or_, and_, cast, String, false, true
 import json
+from importlib import resources
+from jsonschema import validate
 
+class ValidationError(Exception):
+    """Exception raised for errors in the input parameters."""
+    pass
 
 def paramAsDict(param: str):
+    """Parse a JSON string into a dictionary
+
+    Args:
+        param (str): JSON string
+
+    Returns:
+        dict: Dictionary representation of the JSON string, empty dictionary if param is None
+    """
     return json.loads(param) if param else {}
 
 
 def paramAsArray(param: str):
+    """Parse a JSON string as a list
+
+    Args:
+        param (str): JSON string
+
+    Returns:
+        list: List representation of the JSON string, empty list if param is None
+    """
     return json.loads(param) if param else []
 
 
-class QueryBuilder:
+def validate_params(filter: dict | str, sort: list | str, range: list | str) -> dict:
+    """Validate filter, sort and range parameters against a JSON schema.
+    
+    Args:
+        filter (dict | str): Filter parameters
+        sort (list | str): Sort parameters
+        range (list | str): Range parameters
+    
+    Returns:
+        dict: The validated parameters as a dictionary
+    
+    Raises:
+        ValidationError: If the parameters are not valid
+    """
+    package_name = "enacit4r_sql.schemas"
+    resource_name = "query-schema.json"
+    with resources.open_text(package_name, resource_name) as json_file:
+        schema = json.load(json_file)
+    to_validate = {
+        "filter": filter if isinstance(filter, dict) else paramAsDict(filter),
+        "sort": sort if isinstance(sort, list) else paramAsArray(sort),
+        "range": range if isinstance(range, list) else paramAsArray(range)
+    }
+    try:
+        validate(instance=to_validate, schema=schema)
+    except Exception as e:
+        raise ValidationError(f"Invalid query parameters: {e}")
+    return to_validate
 
-    def __init__(self, model: SQLModel, filter: dict, sort: list, range: list, joinModels: dict = {}):
+
+class QueryBuilder:
+    """Helper class to generate SQL queries based on filter, sort and range parameters, based on a provided model. Limited support for join queries.
+    """
+
+    def __init__(self, model: SQLModel, filter: dict, sort: list, range: list, joinModels: dict = {}, validate: bool = False):
+        """Initialize the QueryBuilder object with the provided parameters.
+        
+        Args:
+            model (SQLModel): The model to query
+            filter (dict): Filter parameters
+            sort (list): Sort parameters
+            range (list): Range parameters
+            joinModels (dict, optional): Dictionary of join models. Defaults to {}.
+            validate (bool, optional): Whether to validate the parameters. Defaults to False.
+        """
+        if validate:
+            validate_params(filter, sort, range)
         self.model = model
         self.filter = filter
         self.sort = sort
@@ -21,9 +86,23 @@ class QueryBuilder:
         self.joinModels = joinModels
 
     def build_count_query(self):
+        """Count the number of rows that match the filter.
+
+        Returns:
+            int: The total count of rows that match the filter.
+        """
         return self._apply_filter(select(func.count(func.distinct(self.model.id))))
 
     def build_query(self, total_count, fields=None):
+        """Build a query that retrieves rows that match the filter, sorted and ranged as specified.
+        
+        Args:
+            total_count (int): Total number of rows that match the filter.
+            fields (list, optional): List of fields to retrieve. Defaults to None.
+        
+        Returns:
+            tuple: A tuple containing the start index, end index and the query object.
+        """
         _query = select(self.model)
         if fields and len(fields):
             columns = [getattr(self.model, field) for field in fields]
@@ -31,10 +110,6 @@ class QueryBuilder:
         query_ = self._apply_filter(_query)
         query_ = self._apply_sort(query_)
         return self._apply_range(query_, total_count)
-
-    def build_filter_query(self, query_from):
-        query_ = self._apply_filter(query_from)
-        return query_
 
     def _apply_filter(self, query_):
         return self._apply_model_filter(query_, self.model, self.filter)

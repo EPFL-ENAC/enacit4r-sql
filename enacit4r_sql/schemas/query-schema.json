@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ENAC-IT4R Python SQL Utils: Query Schema",
+  "type": "object",
+  "properties": {
+    "filter": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "$ref": "#/definitions/condition" },
+          { "type": "number" },
+          { "type": "string" },
+          {
+            "type": "array",
+            "items": { "$ref": "#/definitions/condition" }
+          }
+        ]
+      }
+    },
+    "sort": {
+      "type": "array",
+      "items": [
+        { "type": "string" },
+        { "type": "string", "enum": ["ASC", "DESC", "asc", "desc"], "default": "ASC" }
+      ],
+      "minItems": 0,
+      "maxItems": 2
+    },
+    "range": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 0,
+      "maxItems": 2
+    }
+  },
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/condition" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              { "$ref": "#/definitions/condition" },
+              {
+                "type": "array",
+                "items": { "$ref": "#/definitions/condition" }
+              }
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$eq": { "type": ["string", "number"] }
+          },
+          "required": ["$eq"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$ne": { "type": ["string", "number"] }
+          },
+          "required": ["$ne"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$lt": { "type": "number" }
+          },
+          "required": ["$lt"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$lte": { "type": "number" }
+          },
+          "required": ["$lte"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$le": { "type": "number" }
+          },
+          "required": ["$le"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$gt": { "type": "number" }
+          },
+          "required": ["$gt"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$gte": { "type": "number" }
+          },
+          "required": ["$gte"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$ge": { "type": "number" }
+          },
+          "required": ["$ge"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$ilike": { "type": "string" }
+          },
+          "required": ["$ilike"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$like": { "type": "string" }
+          },
+          "required": ["$like"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$contains": {
+              "type": "array",
+              "items": { "type": ["string", "number"] }
+            }
+          },
+          "required": ["$contains"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$in": {
+              "type": "array",
+              "items": { "type": ["string", "number"] }
+            }
+          },
+          "required": ["$in"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$nin": {
+              "type": "array",
+              "items": { "type": ["string", "number"] }
+            }
+          },
+          "required": ["$nin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$exists": { "type": "boolean" }
+          },
+          "required": ["$exists"]
+        }
+      ]
+    }
+  },
+  "required": ["filter"],
+  "additionalProperties": false
+}
