@@ -138,3 +138,5 @@ dmypy.json
 cython_debug/
 
 .vscode/
+*.html
+*_files/

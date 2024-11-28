@@ -23,8 +23,12 @@ class QueryBuilder:
     def build_count_query(self):
         return self._apply_filter(select(func.count(func.distinct(self.model.id))))
 
-    def build_query(self, total_count):
-        query_ = self._apply_filter(select(self.model))
+    def build_query(self, total_count, fields=None):
+        _query = select(self.model)
+        if fields and len(fields):
+            columns = [getattr(self.model, field) for field in fields]
+            _query = select(*columns)
+        query_ = self._apply_filter(_query)
         query_ = self._apply_sort(query_)
         return self._apply_range(query_, total_count)
 
@@ -161,10 +165,10 @@ class QueryBuilder:
         if len(self.sort) == 2:
             sort_field, sort_order = self.sort
             attr = getattr(self.model, sort_field)
-            if sort_order == "ASC":
-                query_ = query_.order_by(attr)
-            else:
+            if sort_order and sort_order.lower() == "desc":
                 query_ = query_.order_by(attr.desc())
+            else:
+                query_ = query_.order_by(attr)
         return query_
 
     def _apply_range(self, query_, total_count):
