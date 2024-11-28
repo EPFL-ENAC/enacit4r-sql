@@ -117,7 +117,7 @@ class QueryBuilder:
         elif isinstance(value, dict):
             clause = self._make_filter_object(field, column, value)
         else:
-            clause = (column.ilike(f"%{value}%"))
+            clause = column == value
         return clause
 
     def _make_filter_object(self, field, column, value):
