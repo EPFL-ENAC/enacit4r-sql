@@ -187,7 +187,7 @@ class QueryBuilder:
 
     def _make_filter_value(self, field, column, value):
         clause = None
-        if field == "id" or field == "identifier" or isinstance(value, int):
+        if field == "id" or isinstance(value, int):
             clause = (column == value)
         elif value is None:
             clause = (column.is_(None))
